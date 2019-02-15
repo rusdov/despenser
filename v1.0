@@ -9,10 +9,11 @@ const int bPin = 5;
 const int bPlus = 3;
 const int bMinus = 2;
 
-//const 
+//const
 int sauce_timer = 1000;
 int but_num = 0;
-int pause = 2000;
+int pause = 10000;
+int target =0;
 
 int regim = 1;
 int flag  = 0;
@@ -79,7 +80,7 @@ void loop() {
   if(digitalRead(bMenu)==LOW&&flag==0){
     regim++;
     flag=1;
-   if(regim>2){
+   if(regim>3){
     regim=1;
   }
  }
@@ -130,7 +131,7 @@ void loop() {
       display.print(but_num);
       display.setTextSize(2);
       display.setTextColor(WHITE,BLACK);
-      display.setCursor(3,10);
+      display.setCursor(3,15);
       display.print("I FILL");
       display.display();
       delay (sauce_timer);
@@ -146,13 +147,17 @@ void loop() {
     //REGIM 2
     
      if(regim==2){
+     // if pump work stop
+     if(digitalRead(bPin)==LOW){
+      digitalWrite(rel_sauce,HIGH);
+     }
   //button status read
   if(digitalRead(bPlus)==HIGH){
-    pause++;
+    pause+=1000; 
     delay(150);
   }
   if(digitalRead(bMinus)==HIGH){
-    pause--;
+    pause-=1000;
     delay(150);
   }
      //display
@@ -168,7 +173,7 @@ void loop() {
     display.setCursor(0,20);
     display.setTextColor(WHITE,BLACK);
     display.print("Pause - ");
-    display.print(pause);
+    display.print(pause / 1000);
     display.display();
     delay (500);
     display.clearDisplay();
@@ -176,6 +181,7 @@ void loop() {
      //pump processing auto pause
      
     if(digitalRead(bPin)==LOW){
+      for(int i =0; i < 10; i++){
       digitalWrite(rel_sauce,LOW);
       sButtonOn = true;
       sButtonOnTime = millis();
@@ -188,17 +194,16 @@ void loop() {
       display.print(but_num);
       display.setTextSize(2);
       display.setTextColor(WHITE,BLACK);
-      display.setCursor(3,10);
+      display.setCursor(3,15);
       display.print("I FILL");
       display.display();
       delay (sauce_timer);
       display.clearDisplay();
-      }
-     
-      if(sButtonOn) 
-      if(millis() - sButtonOnTime > sauce_timer){
       digitalWrite(rel_sauce,HIGH);
-      sButtonOn = false;
+      if(digitalRead(bPin)==LOW) break;
+      delay (pause);
+      
       }
-   }
+    }
+  }
 }
