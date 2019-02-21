@@ -1,0 +1,296 @@
+//Библиотеки
+#include <Adafruit_GFX.h>     //библиотека дисплей
+#include <Adafruit_PCD8544.h> //библиотка nokia 5510
+Adafruit_PCD8544 display = Adafruit_PCD8544(8, 9, 10, 11, 12);
+                                   //(SCLK, DIN, DC, CS, RST);
+//buttons
+const int bMenu = 4;
+const int bPin = 5;
+const int bPlus = 3;
+const int bMinus = 2;
+
+//const
+int sauce_timer = 10000;
+int but_num = 0;
+int pause = 10000;
+int target =0;
+
+int regim = 1;
+int flag  = 0;
+int flag_pause = 0;
+
+
+unsigned long sButtonOnTime;
+unsigned long sButtonStopTime;
+bool sButtonOn;
+
+//reley
+#define rel_sauce 7
+
+static unsigned const char PROGMEM picatura[] =
+{ B0001000,
+  B0001000,
+  B0001000,
+  B0010100,
+  B0100010,
+  B0100010,
+  B0011100
+};
+
+void setup() {
+  pinMode (bPin,INPUT_PULLUP);
+  pinMode (bPlus,INPUT_PULLUP);
+  pinMode (bMinus,INPUT_PULLUP);
+  pinMode (bMenu, INPUT_PULLUP);
+  sButtonOn = false;
+  
+  pinMode (rel_sauce,OUTPUT);
+  digitalWrite(rel_sauce,HIGH);//reley off
+ 
+
+  Serial.begin(9600);//запуск последовательный порт
+ 
+  display.begin();
+ 
+  //Смена контраста дисплея
+  display.setContrast(35);
+  display.clearDisplay();
+ 
+  //Заставка
+  display.setTextSize(2);
+  display.setTextColor(BLACK);
+  display.setCursor(13,0);
+  display.println("MAGMA");
+  display.setCursor(20,15);
+  display.println("CORP");
+  display.setTextSize(1);
+  display.setCursor(5, 30);
+  display.print("auto dipenser");  
+  display.setCursor(13, 40);
+  display.print("version");
+  display.setTextColor(WHITE, BLACK);
+  display.print("1.0");
+  display.display();
+  delay (5000);
+  display.clearDisplay();
+ }
+
+void loop() {
+  
+  //menu button 
+  if(digitalRead(bMenu)==LOW&&flag==0){
+    regim++;
+    flag=1;
+   if(regim>3){
+    regim=1;
+  }
+ }
+  if(digitalRead(bMenu)==HIGH&&flag==1){
+    flag=0;
+  }
+  
+  //REGIM 1
+  
+  if(regim==1){
+  //button status read
+  if(digitalRead(bPlus)==HIGH){
+    sauce_timer+=1000;
+    delay(100);
+  }
+  if(digitalRead(bMinus)==HIGH){
+    sauce_timer-=1000;
+    delay(100);
+  }
+     //display
+    display.setTextSize(1);
+    display.setTextColor(BLACK);
+    display.setCursor(0,3);
+    display.print("Bottle- ");
+    display.print(but_num);
+    display.setCursor(0,13);
+    display.setTextColor(WHITE, BLACK);
+    display.print("Volume- ");
+    display.print(sauce_timer / 1000);
+    display.setCursor(0,23);
+    display.setTextColor(BLACK);
+    display.print("Pause - MANUAL");
+    display.setCursor(0,40);
+    display.setTextColor(BLACK);
+    display.print("Calibration");
+    display.display();
+    delay (500);
+    display.clearDisplay();
+
+     //pump processing
+    if(digitalRead(bPin)==LOW){
+      digitalWrite(rel_sauce,LOW);
+      sButtonOn = true;
+      sButtonOnTime = millis();
+      but_num++;
+      //display
+      display.setTextSize(1);
+      display.setTextColor(BLACK);
+      display.setCursor(0,3);
+      display.print("Bottle - ");
+      display.print(but_num);
+      display.setTextSize(2);
+      display.setTextColor(WHITE,BLACK);
+      display.setCursor(3,15);
+      display.print("I FILL");
+      display.display();
+      delay (sauce_timer);
+      display.clearDisplay();
+      }
+     
+      if(sButtonOn) 
+      if(millis() - sButtonOnTime > sauce_timer){
+      digitalWrite(rel_sauce,HIGH);
+      sButtonOn = false;
+      }
+   }
+    //REGIM 2
+    
+     if(regim==2){
+     // if pump work stop
+     if(digitalRead(bPin)==LOW){
+      digitalWrite(rel_sauce,HIGH);
+     }
+  //button status read
+  if(digitalRead(bPlus)==HIGH){
+    pause+=1000; 
+    delay(150);
+  }
+  if(digitalRead(bMinus)==HIGH){
+    pause-=1000;
+    delay(150);
+  }
+     //display
+    display.setTextSize(1);
+    display.setTextColor(BLACK);
+    display.setCursor(0,3);
+    display.print("Bottle- ");
+    display.print(but_num);
+    display.setCursor(0,13);
+    display.setTextColor(BLACK);
+    display.print("Volume- ");
+    display.print(sauce_timer / 1000);
+    display.setCursor(0,23);
+    display.setTextColor(WHITE,BLACK);
+    display.print("Pause - ");
+    display.print(pause / 1000);
+    display.setCursor(0,40);
+    display.setTextColor(BLACK);
+    display.print("Calibration");
+    display.display();
+    delay (500);
+    display.clearDisplay();
+
+     //pump processing auto pause
+     
+    if(digitalRead(bPin)==LOW){
+      for(int i =0; i < 10; i++){
+      digitalWrite(rel_sauce,LOW);
+      but_num++;
+      
+      //display
+      display.setTextSize(1);
+      display.setTextColor(BLACK);
+      display.setCursor(0,3);
+      display.print("Bottle - ");
+      display.print(but_num);
+      display.setTextSize(2);
+      display.setTextColor(WHITE,BLACK);
+      display.setCursor(3,15);
+      display.print("I FILL");
+      display.display();
+      
+      delay (sauce_timer);
+      display.clearDisplay();
+      digitalWrite(rel_sauce,HIGH);
+      if(digitalRead(bPin)==LOW) break;
+      display.clearDisplay();
+      delay (pause);
+      
+      
+      }
+    }
+  }
+   //REGIM 3
+    
+     if(regim==3){
+     // if pump work stop
+     if(digitalRead(bPin)==LOW){
+      digitalWrite(rel_sauce,HIGH);
+     }
+  //button status read
+  if(digitalRead(bPlus)==HIGH){
+    pause+=1000; 
+    delay(150);
+  }
+  if(digitalRead(bMinus)==HIGH){
+    pause-=1000;
+    delay(150);
+  }
+     //display
+    display.setTextSize(1);
+    display.setTextColor(BLACK);
+    display.setCursor(0,3);
+    display.print("Bottle- ");
+    display.print(but_num);
+    display.setCursor(0,13);
+    display.setTextColor(BLACK);
+    display.print("Volume- ");
+    display.print(sauce_timer / 1000);
+    display.setCursor(0,23);
+    display.setTextColor(BLACK);
+    display.print("Pause - ");
+    display.print(pause / 1000);
+    display.setCursor(0,40);
+    display.setTextColor(WHITE,BLACK);
+    display.print("Calibration");
+    display.display();
+    delay (500);
+    display.clearDisplay();
+
+    //pump processing cach time
+    if(digitalRead(bPin)==LOW){
+      sButtonOn = true;
+      sButtonOnTime = millis();
+    for(int i =0; i < 10; i++){
+      digitalWrite(rel_sauce,LOW);
+     
+      
+    //display
+    display.setTextSize(1);
+    display.setTextColor(BLACK);
+    display.setCursor(0,3);
+    display.print("Bottle- ");
+    display.print(but_num);
+    display.setCursor(0,13);
+    display.setTextColor(BLACK);
+    display.print("Volume- ");
+    display.setTextColor(WHITE,BLACK);
+    display.print("GRAB");
+    display.setCursor(0,23);
+    display.setTextColor(BLACK);
+    display.print("Pause - ");
+    display.print(pause / 1000);
+    display.setCursor(0,40);
+    display.setTextColor(WHITE,BLACK);
+    display.print("Calibration");
+    display.display();
+    display.clearDisplay();
+    }
+
+    if(digitalRead(bPin)==LOW){
+      digitalWrite(rel_sauce,HIGH);
+      sButtonStopTime = millis();
+      sauce_timer = sButtonStopTime - sButtonOnTime;
+      sButtonOn = false;
+      
+      }
+      
+     }
+   }
+ }
+
